@@ -1,4 +1,4 @@
-import pygame, sys, random, math, time
+import pygame, sys, random, math, time, random
 
 #   What is this?
 #   It's just a project I've been working on for a couple of days now after I got intrigued by pathfinding algorithms.
@@ -7,6 +7,16 @@ import pygame, sys, random, math, time
 
 # Node represents each individual Node on the grid
 # I also refer to this as 'Node' in other parts of the code
+
+# Colours
+class Colours:
+    obstacleColour = (30, 30, 30)
+    normalColour = (255, 255, 255)
+    startNodeColour = (0, 255, 255)
+    endNodeColour = (255, 255, 0)
+    openListColour = (0, 255, 0)
+    pathColour = (255, 0, 0)
+
 class Node:
     def __init__(self, position, parent=None):
         self.g = 0
@@ -38,7 +48,7 @@ class Node:
         self.f = self.g + self.h
 
         # testing
-        print("Node: {0} has g: {1}, h: {2}, f: {3}".format(self.position, self.g, self.h, self.f))
+        # print("Node: {0} has g: {1}, h: {2}, f: {3}".format(self.position, self.g, self.h, self.f))
 
 class Grid:
     def __init__(self, w, h, s, m):
@@ -48,20 +58,13 @@ class Grid:
         self.blockMargin = m
         self.inArray = [[Node((j,i)) for i in range(self.width)] for j in range(self.height)]
 
-        self.obstacleColour = (30,30,30)
-        self.normalColour = (255,255,255)
-        self.startNodeColour = (0, 255, 255)
-        self.endNodeColour = (255, 255, 0)
-        self.openListColour = (0,255,0)
-        self.closedListColour = (255,0,0)
-        self.pathColour = (100,100,100)
         # Fix the hard-coding after testing
-        self.startNode = self.inArray[10][10]
-        self.startNode.colour = self.startNodeColour
+        self.startNode = self.inArray[random.randint(0, h-1)][random.randint(0, w-1)]
+        self.startNode.colour = Colours.startNodeColour
         self.startNode.important = True
         self.startNode.name = "START"
-        self.endNode = self.inArray[2][2]
-        self.endNode.colour = self.endNodeColour
+        self.endNode = self.inArray[random.randint(0, h-1)][random.randint(0, w-1)]
+        self.endNode.colour = Colours.endNodeColour
         self.endNode.important = True
         self.endNode.name = "END"
 
@@ -71,13 +74,6 @@ class GUI:
         pygame.display.set_caption('A* Pathfinding Algorithm')
         pygame.font.init()
         # Colours
-        self.obstacleColour = (30,30,30)
-        self.normalColour = (255,255,255)
-        self.startNodeColour = (0, 255, 255)
-        self.endNodeColour = (255, 255, 0)
-        self.openListColour = (0,255,0)
-        self.closedListColour = (255,0,0)
-        self.pathColour = (100,100,100)
         self.font = pygame.font.SysFont("Comic Sans MS", 10)
 
         self.window = pygame.display.set_mode((width * (blocksize + margin), height * (blocksize + margin)))
@@ -92,7 +88,7 @@ class GUI:
                 square = pygame.Rect(i * (grid.blockSize + grid.blockMargin), j * (grid.blockSize + grid.blockMargin), grid.blockSize, grid.blockSize)
                 pygame.draw.rect(self.window, Node.colour, square)
 
-                if Node.f == 0:
+                if Node.f == 0 and Node.important == False:
                     continue
                 # Draw font
                 textSurface = self.font.render(str(Node), False, (0,0,0))
@@ -116,10 +112,9 @@ class GUI:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
                         AStar(grid, grid.startNode, grid.endNode)
-                        self.drawGrid(grid)
                     if event.key == pygame.K_ESCAPE:
-                        # Future implementation, clears grid
-                        pass
+                        grid.__init__(grid.width, grid.height, grid.blockSize, grid.blockMargin)
+                    self.drawGrid(grid)
 
     def changeColour(Node, colour):
         if Node.important == False:
@@ -135,10 +130,10 @@ class GUI:
             return
         if Node.obstacle == False:
             Node.obstacle = True
-            Node.colour = self.obstacleColour
+            Node.colour = Colours.obstacleColour
         else:
             Node.obstacle = False
-            Node.colour = self.normalColour
+            Node.colour = Colours.normalColour
 
 def AStar(grid, startNode, endNode):
     print("Starting A*..."); print("Starting Timer...")
@@ -180,7 +175,7 @@ def AStar(grid, startNode, endNode):
         if currentNode == endNode:
             ptr = currentNode
             while ptr != None:
-                GUI.changeColour(ptr, (255,0,0))
+                GUI.changeColour(ptr, Colours.pathColour)
                 ptr = ptr.parent
             print("A* runtime: {0} seconds".format(time.time() - startTime))
             return
@@ -200,7 +195,7 @@ def AStar(grid, startNode, endNode):
             if (previouslyChecked(node, closed, open)):
                 continue
             node.calculateCosts(currentNode, endNode)
-            GUI.changeColour(node, (0,255,0))
+            GUI.changeColour(node, Colours.openListColour)
             for i in range(len(open)):
                 if node == open[i] and node.g > open[i].g:
                     continue
@@ -222,6 +217,17 @@ def main():
     HEIGHT = 20
     BLOCKSIZE = 40
     MARGIN = 2
+
+    ans = input("\nDo you want to enter custom Grid Values? Y/N\n")
+    if ans.lower() == "y" or ans.lower() == "yes":
+        WIDTH = int(input("\nPlease enter width amount (x-axis range. Default is 20): \n"))
+        HEIGHT = int(input("\nPlease enter height amount (y-axis range. Default is 20): \n"))
+        BLOCKSIZE = int(input("\nPlease enter blocksize (size of each individual cell. Default is 20): \n"))
+        MARGIN = int(input("\nPlease enter the margin amount (how much space between each cell. Default is 2): \n"))
+    else:
+        print("\nGoing to take default values.\n")
+        print("\nControls:\n\n\nClick to place/delete obstacles.\nSpace to start A* Algorithm.\nEscape to clear screen.\n")
+        time.sleep(5)
 
     grid = Grid(WIDTH, HEIGHT, BLOCKSIZE, MARGIN)
     gui = GUI(grid, WIDTH, HEIGHT, BLOCKSIZE, MARGIN)
