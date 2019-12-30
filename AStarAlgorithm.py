@@ -1,4 +1,4 @@
-import pygame, sys, random, math, time, random
+import pygame, sys, random, math, time, random, traceback
 
 #   What is this?
 #   It's just a project I've been working on for a couple of days now after I got intrigued by pathfinding algorithms.
@@ -95,7 +95,7 @@ class GUI:
                 self.window.blit(textSurface, square)
         pygame.display.update()
 
-    def mainLoop(self, grid):
+    def mainLoop(self, grid, w, h):
         self.drawGrid(grid)
         running = True
 
@@ -107,7 +107,7 @@ class GUI:
                     x = (mousePos[0]) // (grid.blockSize + grid.blockMargin)
                     y = (mousePos[1]) // (grid.blockSize + grid.blockMargin)
                     #print("w: " + str(mousePos[0]), ", h: " + str(mousePos[1]))
-                    self.updateGrid(grid, x, y)
+                    self.updateGrid(grid, x, y, w, h)
                     self.drawGrid(grid)
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
@@ -122,10 +122,10 @@ class GUI:
         else:
             return
     # Allows placement of obstacles
-    def updateGrid(self, grid, w, h):
-        if w >= 30: w = 29
-        if h >= 30: h = 29
-        Node = grid.inArray[w][h]
+    def updateGrid(self, grid, x, y, w, h):
+        if x >= w: x -= 1
+        if y >= h: y -= 1
+        Node = grid.inArray[x][y]
         if Node.important == True:
             return
         if Node.obstacle == False:
@@ -181,8 +181,11 @@ def AStar(grid, startNode, endNode):
             return
 
         for adjacentNode in [(-1,-1),(0,-1),(1,-1),(-1,0),(1,0),(-1,1),(0,1),(1,1)]:
+
+            node0 = currentNode.position[0] + adjacentNode[0]
+            node1 = currentNode.position[1] + adjacentNode[1]
             # Stay within range
-            if (currentNode.position[0] + adjacentNode[0] >= 0) and (currentNode.position[1] + adjacentNode[1] >= 0):
+            if (node0 >= 0 and node0 < len(grid.inArray[0])) and (node1 >= 0 and node1 < len(grid.inArray)):
                 # Get the grid-node associated with each adjacent node tuple
                 newNode = grid.inArray[currentNode.position[0] + adjacentNode[0]][currentNode.position[1] + adjacentNode[1]]
 
@@ -201,6 +204,7 @@ def AStar(grid, startNode, endNode):
                     continue
             node.parent = currentNode
             open.append(node)
+    print("Path not found")
 
 # Checks if node is within open or closed list
 def previouslyChecked(node, closed, open):
@@ -229,13 +233,17 @@ def main():
         print("\nControls:\n\n\nClick to place/delete obstacles.\nSpace to start A* Algorithm.\nEscape to clear screen.\n")
         time.sleep(5)
 
-    grid = Grid(WIDTH, HEIGHT, BLOCKSIZE, MARGIN)
-    gui = GUI(grid, WIDTH, HEIGHT, BLOCKSIZE, MARGIN)
+    try:
+        grid = Grid(WIDTH, HEIGHT, BLOCKSIZE, MARGIN)
+        gui = GUI(grid, WIDTH, HEIGHT, BLOCKSIZE, MARGIN)
 
-    gui.mainLoop(grid)
-
-    pygame.quit()
-    sys.exit()
+        gui.mainLoop(grid, WIDTH, HEIGHT)
+    except:
+        logfile = open("mostRecentCrash.txt", "w")
+        traceback.print_exc(file=logfile)
+    finally:
+        pygame.quit()
+        sys.exit()
 
 # Run it!
 if __name__ == "__main__":
